@@ -39,6 +39,25 @@ message PoolParams {
       [ (gogoproto.moretags) = "yaml:\"swap_fee_governor\"" ];
 }
 
+// WeightChangeParams defined the parameters that will be managed by the pool governance
+// in the future. This params are not managed by the chain governanace.
+message PoolParams {
+  // If the pool is locked, users can't join, exit or swap the pool.
+  bool lock = 1;
+  string swapFee = 2 [
+    (gogoproto.customtype) = "github.com/cosmos/cosmos-sdk/types.Dec",
+    (gogoproto.moretags) = "yaml:\"swap_fee\"",
+    (gogoproto.nullable) = false
+  ];
+  string exitFee = 3 [
+    (gogoproto.customtype) = "github.com/cosmos/cosmos-sdk/types.Dec",
+    (gogoproto.moretags) = "yaml:\"exit_fee\"",
+    (gogoproto.nullable) = false
+  ];
+  string swapFeeGovernor = 4
+      [ (gogoproto.moretags) = "yaml:\"swap_fee_governor\"" ];
+}
+
 message PoolAccount {
   option (gogoproto.goproto_getters) = false;
   option (gogoproto.goproto_stringer) = false;
@@ -51,8 +70,8 @@ message PoolAccount {
   uint64 id = 2;
   PoolParams poolParams = 3 [
     (gogoproto.moretags) = "yaml:\"pool_params\"",
-    (gogoproto.nullable) = false
   ];
+    (gogoproto.nullable) = false
   string totalWeight = 4 [
     (gogoproto.customtype) = "github.com/cosmos/cosmos-sdk/types.Int",
     (gogoproto.moretags) = "yaml:\"total_weight\"",
@@ -64,6 +83,31 @@ message PoolAccount {
   ];
   repeated Record records = 6 [
     (gogoproto.moretags) = "yaml:\"records\"",
+    (gogoproto.nullable) = false
+  ];
+  GradualUpdateParams gradualUpdateParams = 7 [
+    (gogoproto.moretags) = "yaml:\"gradual_update_params\"",
+  ];
+}
+
+message GradualUpdateRecordsParams {
+  google.protobuf.Timestamp startTime = 1
+        [(gogoproto.stdtime) = true, (gogoproto.nullable) = false, (gogoproto.moretags) = "yaml:\"end_time\""];
+	
+  google.protobuf.Duration duration = 2 [
+    (gogoproto.nullable)    = false,
+    (gogoproto.stdduration) = true,
+    (gogoproto.jsontag)     = "duration,omitempty",
+    (gogoproto.moretags)    = "yaml:\"duration\""
+  ];
+
+  repeated Record startRecords = 3 [
+    (gogoproto.moretags) = "yaml:\"start_records\"",
+    (gogoproto.nullable) = false
+  ];
+
+  repeated Record endRecords = 4 [
+    (gogoproto.moretags) = "yaml:\"end_records\"",
     (gogoproto.nullable) = false
   ];
 }

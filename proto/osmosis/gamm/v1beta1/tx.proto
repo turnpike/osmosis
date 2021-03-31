@@ -35,6 +35,8 @@ message MsgCreatePool {
     (gogoproto.nullable) = false
   ];
 
+  
+
   repeated Record records = 3 [ (gogoproto.nullable) = false ];
 }
 
