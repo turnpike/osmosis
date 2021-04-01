@@ -170,14 +170,6 @@ func calcPoolInGivenSingleOut(
 
 /*********************************************************/
 
-func subSign(a, b sdk.Dec) (sdk.Dec, bool) {
-	if a.GTE(b) {
-		return a.Sub(b), false
-	} else {
-		return b.Sub(a), true
-	}
-}
-
 func pow(base sdk.Dec, exp sdk.Dec) sdk.Dec {
 	if base.LTE(sdk.ZeroDec()) {
 		panic(fmt.Errorf("base have to be greater than zero"))
@@ -200,6 +192,14 @@ func pow(base sdk.Dec, exp sdk.Dec) sdk.Dec {
 	return wholePow.Mul(partialResult)
 }
 
+func subSign(a, b *mutableDec) (*mutableDec, bool) {
+	if a.GTE(b) {
+		return a.Sub(b), false
+	} else {
+		return b.Sub(a), true
+	}
+}
+
 func powApprox(base sdk.Dec, exp sdk.Dec, precision sdk.Dec) sdk.Dec {
 	if base.LTE(sdk.ZeroDec()) {
 		panic(fmt.Errorf("base have to be greater than zero"))
@@ -208,17 +208,18 @@ func powApprox(base sdk.Dec, exp sdk.Dec, precision sdk.Dec) sdk.Dec {
 		panic(fmt.Errorf("base have to be lesser than two"))
 	}
 
-	a := exp
-	x, xneg := subSign(base, sdk.OneDec())
-	term := sdk.OneDec()
-	sum := sdk.OneDec()
+	a := NewMutableDecFromDec(exp)
+	x, xneg := subSign(NewMutableDecFromDec(base), NewMutableDecFromDec(sdk.OneDec()))
+	term := NewMutableDecFromDec(sdk.OneDec())
+	sum := NewMutableDecFromDec(sdk.OneDec())
 	negative := false
 
-	for i := 1; term.GTE(precision); i++ {
-		bigK := sdk.OneDec().MulInt64(int64(i))
-		c, cneg := subSign(a, bigK.Sub(sdk.OneDec()))
+	k := NewMutableDecFromInt64(0)
+	paramPrecision := NewMutableDecFromDec(precision)
+	for i := 1; term.GTE(paramPrecision); i++ {
+		c, cneg := subSign(a.Clone(), k.SetInt64(int64(i-1)))
 		term = term.Mul(c.Mul(x))
-		term = term.Quo(bigK)
+		term = term.Quo(k.SetInt64(int64(i)))
 
 		if term.IsZero() {
 			break
@@ -237,5 +238,5 @@ func powApprox(base sdk.Dec, exp sdk.Dec, precision sdk.Dec) sdk.Dec {
 			sum = sum.Add(term)
 		}
 	}
-	return sum
+	return sum.Dec()
 }

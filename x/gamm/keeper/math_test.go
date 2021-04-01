@@ -14,12 +14,12 @@ func TestSubSign(t *testing.T) {
 	decB, err := sdk.NewDecFromStr("4.3432389")
 	require.NoError(t, err)
 
-	s, b := subSign(decA, decB)
+	s, b := subSign(NewMutableDecFromDec(decA), NewMutableDecFromDec(decB))
 	require.True(t, b)
 
 	expectedDec, err := sdk.NewDecFromStr("1.1432389")
 	require.NoError(t, err)
-	require.Equal(t, expectedDec, s)
+	require.Equal(t, expectedDec.String(), s.String())
 }
 
 func TestPowApprox(t *testing.T) {
