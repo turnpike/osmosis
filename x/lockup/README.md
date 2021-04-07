@@ -32,10 +32,10 @@ osmosisd query lockup lock-by-id 1
 osmosisd query lockup account-unlockable-coins $(osmosisd keys show -a validator --keyring-backend=test)
 
 # query account locks by denom past time
-osmosisd query lockup account-locked-pasttime-denom $(osmosisd keys show -a validator --keyring-backend=test) 1611879610 stake
+osmosisd query lockup account-locked-pastime-denom $(osmosisd keys show -a validator --keyring-backend=test) 1611879610 stake
 
 # query account locks past time
-osmosisd query lockup account-locked-pasttime $(osmosisd keys show -a validator --keyring-backend=test) 1611879610
+osmosisd query lockup account-locked-pastime $(osmosisd keys show -a validator --keyring-backend=test) 1611879610
 
 # query account locks by denom with longer duration
 osmosisd query lockup account-locked-longer-duration-denom $(osmosisd keys show -a validator --keyring-backend=test) 5.1s stake
