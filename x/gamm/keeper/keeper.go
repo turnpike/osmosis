@@ -24,6 +24,8 @@ type Keeper struct {
 	storeKey sdk.StoreKey
 	cdc      codec.BinaryMarshaler
 
+	hooks types.GammHooks
+
 	// keepers
 	accountKeeper types.AccountKeeper
 	bankKeeper    types.BankKeeper
@@ -49,4 +51,15 @@ func NewKeeper(cdc codec.BinaryMarshaler, storeKey sdk.StoreKey, accountKeeper t
 		accountKeeper: accountKeeper,
 		bankKeeper:    bankKeeper,
 	}
+}
+
+// Set the gamm hooks
+func (k *Keeper) SetHooks(gh types.GammHooks) *Keeper {
+	if k.hooks != nil {
+		panic("cannot set gamm hooks twice")
+	}
+
+	k.hooks = gh
+
+	return k
 }
