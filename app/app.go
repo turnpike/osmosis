@@ -561,7 +561,7 @@ func NewOsmosisApp(
 	app.SetInitChainer(app.InitChainer)
 	app.SetBeginBlocker(app.BeginBlocker)
 	app.SetAnteHandler(
-		ante.NewAnteHandler(
+		NewAnteHandler(
 			app.AccountKeeper, app.BankKeeper, ante.DefaultSigVerificationGasConsumer,
 			encodingConfig.TxConfig.SignModeHandler(),
 		),
