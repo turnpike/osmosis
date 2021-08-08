@@ -9,7 +9,7 @@ option go_package = "github.com/osmosis-labs/osmosis/x/gamm/types";
 
 // GenesisState defines the gamm module's genesis state.
 message GenesisState {
-    repeated google.protobuf.Any pools = 1
-        [ (cosmos_proto.accepts_interface) = "PoolI" ];
-    uint64 next_pool_number = 2;
+  repeated google.protobuf.Any pools = 1
+      [ (cosmos_proto.accepts_interface) = "PoolI" ];
+  uint64 next_pool_number = 2;
 }
