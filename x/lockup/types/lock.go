@@ -14,6 +14,8 @@ func NewPeriodLock(ID uint64, owner sdk.AccAddress, duration time.Duration, endT
 		Duration: duration,
 		EndTime:  endTime,
 		Coins:    coins,
+		// Period:   0,
+		// Reward:   sdk.Coins{},
 	}
 }
 

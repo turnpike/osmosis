@@ -555,3 +555,12 @@ func (k Keeper) Unlock(ctx sdk.Context, lock types.PeriodLock) error {
 	k.hooks.OnTokenUnlocked(ctx, owner, lock.ID, lock.Coins, lock.Duration, lock.EndTime)
 	return nil
 }
+
+//////////////////////////// STH START //////////////////////////////////
+
+func (k Keeper) GetUnlockingsBetweenTimeDenom(ctx sdk.Context, denom string, starttime time.Time, endtime time.Time) []types.PeriodLock {
+	// returns both unlocking started and not started assuming it started unlocking current time
+	return k.getLocksFromIterator(ctx, k.LockIteratorBetweenTimeDenom(ctx, true, denom, starttime, endtime))
+}
+
+////////////////////////////  STH END //////////////////////////////////
