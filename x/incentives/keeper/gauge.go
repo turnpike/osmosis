@@ -601,7 +601,7 @@ func (k Keeper) GetUnlockingsToDistribution(ctx sdk.Context, denom string, epoch
 }
 
 func (k Keeper) PrepareCurrentReward(ctx sdk.Context, epochTime time.Time, epochDuration time.Duration) error {
-	lockDurations := k.GetLockableDurations(ctx)
+	lockableDurations := k.GetLockableDurations(ctx)
 	gauges := k.GetActiveGauges(ctx)
 
 	for _, gauge := range gauges {
@@ -610,14 +610,14 @@ func (k Keeper) PrepareCurrentReward(ctx sdk.Context, epochTime time.Time, epoch
 		if !gauge.IsPerpetual { // set remain epochs when it's not perpetual gauge
 			remainEpochs = gauge.NumEpochsPaidOver - gauge.FilledEpochs
 		}
-		for _, lockDuration := range lockDurations {
-			if gauge.DistributeTo.Duration > lockDuration { // TODO: support DistributeTo.Timestamp
+		for _, lockableDuration := range lockableDurations {
+			if gauge.DistributeTo.Duration > lockableDuration { // TODO: support DistributeTo.Timestamp
 				continue
 			}
 
 			for _, coin := range remainCoins {
 				denom := gauge.DistributeTo.Denom
-				currentReward := k.GetCurrentReward(denom, lockDuration)
+				currentReward := k.GetCurrentReward(denom, lockableDuration)
 				amt := coin.Amount.Quo(sdk.NewInt(int64(remainEpochs))) // TODO: check range of remainEpochs
 				if amt.IsPositive() {
 					currentReward.Reward.Add(sdk.NewCoin(coin.Denom, amt))
@@ -626,7 +626,7 @@ func (k Keeper) PrepareCurrentReward(ctx sdk.Context, epochTime time.Time, epoch
 					// TODO: return error?
 				}
 				if !currentReward.IsNewEpoch {
-					locks := k.GetUnlockingsToDistribution(ctx, denom, epochTime, epochDuration, lockDuration)
+					locks := k.GetUnlockingsToDistribution(ctx, denom, epochTime, epochDuration, lockableDuration)
 					if len(locks) > 0 {
 						currentReward.IsNewEpoch = true
 					}
@@ -640,7 +640,6 @@ func (k Keeper) PrepareCurrentReward(ctx sdk.Context, epochTime time.Time, epoch
 
 func (k Keeper) CalculateHistoricalRewards(ctx sdk.Context, denom string, lockDuration time.Duration) (sdk.Coins, error) {
 	totalDistrCoins := sdk.NewCoins()
-	// var totalStakes sdk.Coins
 	currentReward := k.GetCurrentReward(denom, lockDuration)
 
 	if currentReward.IsNewEpoch { // Double check
@@ -660,10 +659,12 @@ func (k Keeper) CalculateHistoricalRewards(ctx sdk.Context, denom string, lockDu
 		currentReward.Period++
 		currentReward.IsNewEpoch = false
 		currentReward.Count = 0
-		currentReward.Coin = sdk.NewCoin(denom, sdk.NewInt(0))
-		currentReward.Reward = sdk.NewCoin(denom, sdk.NewInt(0))
-
+		currentReward.Coin = sdk.NewCoin(denom, sdk.NewInt(0)) // TODO: locksum
+		distrCoins := sdk.NewCoin(denom, currRewardPerShare.Mul(totalStakes))
+		currentReward.Reward = currentReward.Reward.Sub(distrCoins)
 		// currentReward.commit()
+
+		totalDistrCoins.Add(distrCoins)
 	}
 
 	return totalDistrCoins, nil
