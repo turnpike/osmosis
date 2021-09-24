@@ -44,10 +44,10 @@ message LockableDurationsInfo {
 }
 
 message HistoricalReward {
-  repeated cosmos.base.v1beta1.Coin cummulative_reward_ratio = 1 [
+  cosmos.base.v1beta1.Coin cummulative_reward_ratio = 1 [
     (gogoproto.nullable) = false,
     (gogoproto.castrepeated) = "github.com/cosmos/cosmos-sdk/types.Coin"
-  ]; // can distribute multiple coins
+  ];
 }
 
 message CurrentReward {
@@ -61,5 +61,5 @@ message CurrentReward {
   cosmos.base.v1beta1.Coin reward = 5 [
     (gogoproto.nullable) = false,
     (gogoproto.castrepeated) = "github.com/cosmos/cosmos-sdk/types.Coin"
-  ]; // can distribute multiple coins
+  ];
 }
