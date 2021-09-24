@@ -27,7 +27,8 @@ func (k Keeper) AfterEpochEnd(ctx sdk.Context, epochIdentifier string, epochNumb
 		// distribute due to epoch event
 		gauges = k.GetActiveGauges(ctx)
 		for _, gauge := range gauges {
-			_, err := k.Distribute(ctx, gauge)
+			//_, err := k.Distribute(ctx, gauge)
+			err := k.F1Distribute(ctx, gauge)
 			if err != nil {
 				panic(err)
 			}
@@ -81,42 +82,6 @@ func (h Hooks) OnTokenLocked(ctx sdk.Context, address sdk.AccAddress, lockID uin
 }
 
 func (h Hooks) OnTokenUnlocked(ctx sdk.Context, address sdk.AccAddress, lockID uint64, amount sdk.Coins, lockDuration time.Duration, unlockTime time.Time) {
-}
-
-func (k Keeper) TempAfterEpochEnd(ctx sdk.Context, epochIdentifier string, epochNumber int64) {
-	params := k.GetParams(ctx)
-	if epochIdentifier == params.DistrEpochIdentifier {
-		// begin distribution if it's start time
-		gauges := k.GetUpcomingGauges(ctx)
-		for _, gauge := range gauges {
-			if !ctx.BlockTime().Before(gauge.StartTime) {
-				if err := k.BeginDistribution(ctx, gauge); err != nil {
-					panic(err)
-				}
-			}
-		}
-
-		// distribute due to epoch event
-		gauges = k.GetActiveGauges(ctx)
-		epochStartTime := time.Time{}
-
-		epochDuration, err := time.ParseDuration(epochIdentifier)
-		if (err != nil) || (k.PrepareCurrentReward(ctx, epochStartTime, epochDuration) == nil) {
-			// TODO: return error
-		}
-
-		lockDurations := k.GetLockableDurations(ctx)
-		for _, lockDuration := range lockDurations {
-			currentRewards := k.GetCurrentRewardsByLockableDuration(lockDuration)
-			for _, currentReward := range *currentRewards {
-				if !currentReward.IsNewEpoch {
-					continue
-				}
-				denom := currentReward.Coin.GetDenom()
-				k.CalculateHistoricalRewards(ctx, denom, lockDuration)
-			}
-		}
-	}
 }
 
 ////////////////////////////  STH END //////////////////////////////////
