@@ -672,7 +672,7 @@ func (k Keeper) CalculateHistoricalRewards(ctx sdk.Context, denom string, durati
 				Duration:      duration,
 			})
 			// Unlocking Locks
-			newTotalStakes.Add(k.lk.GetUnlockingPeriodLocksAccumulation(ctx, denom, epochStartTime.Add(duration)))
+			newTotalStakes.Sub(k.lk.GetUnlockingPeriodLocksAccumulation(ctx, denom, epochStartTime.Add(duration)))
 
 			// Move to Next Period
 			currentReward.Period++
