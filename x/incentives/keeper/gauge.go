@@ -577,7 +577,7 @@ func (k Keeper) GetEpochInfo(ctx sdk.Context) epochtypes.EpochInfo {
 	return k.ek.GetEpochInfo(ctx, params.DistrEpochIdentifier)
 }
 
-//////////////////////////// STH START //////////////////////////////////
+//////////////////////////// START //////////////////////////////////
 
 func (k Keeper) setCurrentReward(ctx sdk.Context, currentReward types.CurrentReward, denom string, lockDuration time.Duration) error {
 	store := ctx.KVStore(k.storeKey)
@@ -646,11 +646,44 @@ func (k Keeper) GetHistoricalReward(ctx sdk.Context, denom string, lockDuration 
 	return historicalReward, nil
 }
 
+func (k Keeper) SetPeriodLockReward(ctx sdk.Context, periodLockReward types.PeriodLockReward) error {
+	store := ctx.KVStore(k.storeKey)
+	rewardKey := combineKeys(types.KeyHistoricalReward, []byte(sdk.Uint64ToBigEndian(periodLockReward.ID)))
+
+	bz, err := proto.Marshal(&periodLockReward)
+	if err != nil {
+		return err
+	}
+
+	store.Set(rewardKey, bz)
+
+	return nil
+}
+
+func (k Keeper) clearPeriodLockReward(ctx sdk.Context, id uint64) {
+	store := ctx.KVStore(k.storeKey)
+	rewardKey := combineKeys(types.KeyHistoricalReward, []byte(sdk.Uint64ToBigEndian(id)))
+	store.Delete(rewardKey)
+}
+
 func (k Keeper) GetPeriodLockReward(ctx sdk.Context, id uint64) (types.PeriodLockReward, error) {
-	return types.PeriodLockReward{
-		ID:     id,
-		Period: make(map[string]uint64),
-	}, nil // TODO: get current reward from Store
+	store := ctx.KVStore(k.storeKey)
+	rewardKey := combineKeys(types.KeyHistoricalReward, []byte(sdk.Uint64ToBigEndian(id)))
+
+	bz := store.Get(rewardKey)
+	if bz == nil {
+		return types.PeriodLockReward{
+			ID:     id,
+			Period: make(map[string]uint64),
+		}, nil
+	}
+
+	periodLockReward := types.PeriodLockReward{}
+	err := proto.Unmarshal(bz, &periodLockReward)
+	if err != nil {
+		return periodLockReward, err
+	}
+	return periodLockReward, nil
 }
 
 // GetLocksToDistribution get locks that are associated to a condition
@@ -698,6 +731,7 @@ func (k Keeper) F1Distribute(ctx sdk.Context, gauge *types.Gauge) error {
 		}
 	}
 
+	// FIXME: when multiple gauges refer one current reward
 	if currentReward.IsNewEpoch || !gauge.IsPerpetual {
 		_, err := k.CalculateHistoricalRewards(ctx, &currentReward, denom, duration, epochStartTime)
 		if err != nil {
@@ -810,6 +844,7 @@ func (k Keeper) UpdateRewardForLock(ctx sdk.Context, address sdk.AccAddress, loc
 		}
 		lockReward.Period[denom] = currentPeriod
 	}
+	k.SetPeriodLockReward(ctx, lockReward)
 	return nil
 }
 
@@ -837,4 +872,4 @@ func (k Keeper) ClaimRewardForLock(ctx sdk.Context, address sdk.AccAddress, lock
 	return nil
 }
 
-////////////////////////////  STH END //////////////////////////////////
+////////////////////////////  END //////////////////////////////////

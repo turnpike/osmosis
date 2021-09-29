@@ -64,7 +64,7 @@ func (h Hooks) AfterEpochEnd(ctx sdk.Context, epochIdentifier string, epochNumbe
 	h.k.AfterEpochEnd(ctx, epochIdentifier, epochNumber)
 }
 
-//////////////////////////// STH START //////////////////////////////////
+//////////////////////////// START //////////////////////////////////
 
 var _ lockuptypes.LockupHooks = Hooks{}
 
@@ -97,7 +97,8 @@ func (h Hooks) OnTokenUnlocked(ctx sdk.Context, address sdk.AccAddress, lockID u
 		// }
 		h.k.UpdateRewardForLock(ctx, address, lockID, amount, lockableDuration, unlockTime)
 		h.k.ClaimRewardForLock(ctx, address, lockID, amount, lockableDuration, unlockTime)
+		h.k.clearPeriodLockReward(ctx, lockID)
 	}
 }
 
-////////////////////////////  STH END //////////////////////////////////
+////////////////////////////  END //////////////////////////////////
