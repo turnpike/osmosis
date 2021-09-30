@@ -635,6 +635,11 @@ func (k Keeper) GetHistoricalReward(ctx sdk.Context, denom string, lockDuration 
 	store := ctx.KVStore(k.storeKey)
 	rewardKey := combineKeys(types.KeyHistoricalReward, []byte(denom), []byte(lockDuration.String()), sdk.Uint64ToBigEndian(period))
 
+	// TODO: temporary workaround before adding initialization of period 0
+	if period == 0 {
+		return historicalReward, nil
+	}
+
 	bz := store.Get(rewardKey)
 	if bz == nil {
 		return historicalReward, fmt.Errorf("historical rewards is not present = %d", period)
@@ -763,7 +768,7 @@ func (k Keeper) CalculateHistoricalRewards(ctx sdk.Context, currentReward *types
 			currRewardPerShare = totalReward.Quo(totalStakes)
 		}
 		prevHistoricalReward, err := k.GetHistoricalReward(ctx, denom, duration, currentReward.Period-1)
-		if err != nil && currentReward.Period > 1 {
+		if err != nil {
 			return totalDistrCoins, err
 		}
 
@@ -802,7 +807,7 @@ func (k Keeper) CalculateHistoricalRewards(ctx sdk.Context, currentReward *types
 func (k Keeper) CalculateReward(ctx sdk.Context, denom string, duration time.Duration, amount sdk.Int, currPeriod uint64, prevPeriod uint64) (sdk.Coins, error) {
 	totalReward := sdk.Coins{}
 	prevHistoricalReward, err := k.GetHistoricalReward(ctx, denom, duration, prevPeriod)
-	if err != nil && prevPeriod > 0 {
+	if err != nil {
 		return totalReward, err
 	}
 	targetHistoricalReward, err := k.GetHistoricalReward(ctx, denom, duration, currPeriod)
