@@ -1,6 +1,7 @@
 package keeper
 
 import (
+	"fmt"
 	"time"
 
 	sdk "github.com/cosmos/cosmos-sdk/types"
@@ -70,6 +71,7 @@ var _ lockuptypes.LockupHooks = Hooks{}
 
 func (h Hooks) OnTokenLocked(ctx sdk.Context, address sdk.AccAddress, lockID uint64, amount sdk.Coins, lockDuration time.Duration, unlockTime time.Time) {
 	lockableDurations := h.k.GetLockableDurations(ctx)
+	ctx.Logger().Info(fmt.Sprintf("STH::: token locked [%d]", lockID))
 	for _, lockableDuration := range lockableDurations {
 		if lockDuration < lockableDuration {
 			continue
@@ -80,6 +82,7 @@ func (h Hooks) OnTokenLocked(ctx sdk.Context, address sdk.AccAddress, lockID uin
 			if err != nil {
 				panic(err)
 			}
+			ctx.Logger().Info(fmt.Sprintf("STH::: new historical reward[%d]", currentReward.Period))
 			epochInfo := h.k.GetEpochInfo(ctx)
 			h.k.CalculateHistoricalRewards(ctx, &currentReward, denom, lockableDuration, epochInfo)
 			h.k.setCurrentReward(ctx, currentReward, denom, lockableDuration)

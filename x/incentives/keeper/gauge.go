@@ -619,7 +619,8 @@ func (k Keeper) addHistoricalReward(ctx sdk.Context, historicalReward types.Hist
 	rewardKey := combineKeys(types.KeyHistoricalReward, []byte(denom), []byte(lockDuration.String()), sdk.Uint64ToBigEndian(period))
 
 	if store.Has(rewardKey) {
-		return fmt.Errorf("historical reward is already exist. Denom/Duration/Period = %s/%ds/%d", denom, lockDuration, period)
+		ctx.Logger().Info(fmt.Sprintf("STH::: error[%s]", fmt.Errorf("historical reward is already exist. Denom/Duration/Period = %s/%ds/%d", denom, lockDuration, period).Error()))
+		// return fmt.Errorf("historical reward is already exist. Denom/Duration/Period = %s/%ds/%d", denom, lockDuration, period)
 	}
 
 	bz, err := proto.Marshal(&historicalReward)
@@ -705,6 +706,7 @@ func (k Keeper) GetUnlockingsToDistribution(ctx sdk.Context, denom string, epoch
 }
 
 func (k Keeper) F1Distribute(ctx sdk.Context, gauge *types.Gauge) error {
+	ctx.Logger().Info(fmt.Sprintf("STH::: F1Distribute gauge[%d]+++++++++++++++++++++++++++++++++++++", gauge.Id))
 	remainCoins := gauge.Coins.Sub(gauge.DistributedCoins)
 	remainEpochs := uint64(1)
 	if !gauge.IsPerpetual { // set remain epochs when it's not perpetual gauge
@@ -736,6 +738,9 @@ func (k Keeper) F1Distribute(ctx sdk.Context, gauge *types.Gauge) error {
 		// checking to see if staking ratio has been changed due to unlocking?
 		locks := k.GetUnlockingsToDistribution(ctx, denom, epochStartTime.Add(duration), epochInfo.Duration)
 		if len(locks) > 0 {
+			for _, lock := range locks {
+				ctx.Logger().Info(fmt.Sprintf("STH::: Epochtime[%s] Lock[%d] is now excluded endtime:%s duration:%s", epochStartTime.String(), lock.ID, lock.EndTime.String(), lock.Duration))
+			}
 			currentReward.IsNewEpoch = true
 		}
 	}
@@ -747,6 +752,11 @@ func (k Keeper) F1Distribute(ctx sdk.Context, gauge *types.Gauge) error {
 			return fmt.Errorf("failed to CalculateHistoricalRewards. Gauge ID = %d. %s", gauge.Id, err.Error())
 		}
 	}
+	ctx.Logger().Info(fmt.Sprintf("STH::: Epoch [%d] Period [%d]", epochInfo.CurrentEpoch, currentReward.Period))
+	for _, reward := range currentReward.Rewards {
+		ctx.Logger().Info(fmt.Sprintf("STH::: Denom %s : Amount %d :::", reward.Denom, reward.Amount.Int64()))
+	}
+	ctx.Logger().Info(fmt.Sprintf("STH::: [%d]-------------------------------------", epochInfo.CurrentEpoch))
 
 	k.setCurrentReward(ctx, currentReward, denom, duration)
 
@@ -784,12 +794,17 @@ func (k Keeper) CalculateHistoricalRewards(ctx sdk.Context, currentReward *types
 
 			newHistoricalReward.CummulativeRewardRatio = prevHistoricalReward.CummulativeRewardRatio.Add(sdk.NewCoin(coin.Denom, currRewardPerShare))
 
+			ctx.Logger().Info(fmt.Sprintf("STH::: prevHistoricalReward[%d] duration: %s denom: %s Amount: [%d]", prevPeriod, duration.String(), denom, prevHistoricalReward.CummulativeRewardRatio.AmountOf(denom).Int64()))
+			ctx.Logger().Info(fmt.Sprintf("STH::: totalReward %d totalStakes: %d rewardPerShare %d", totalReward.Int64(), totalStakes.Int64(), currRewardPerShare.Int64()))
+			ctx.Logger().Info(fmt.Sprintf("STH::: currHistoricalReward[%d] duration: %s denom: %s Amount: [%d]", currentReward.Period, duration.String(), denom, newHistoricalReward.CummulativeRewardRatio.AmountOf(denom).Int64()))
+
 			distrCoins := sdk.NewCoin(coin.Denom, currRewardPerShare.Mul(totalStakes))
 			totalDistrCoins = totalDistrCoins.Add(distrCoins)
 		}
 
 		err = k.addHistoricalReward(ctx, newHistoricalReward, denom, duration, currentReward.Period)
 		if err != nil {
+			ctx.Logger().Info(fmt.Sprintf("STH::: error[%s]", err.Error()))
 			return totalDistrCoins, err
 		}
 	}
@@ -802,6 +817,8 @@ func (k Keeper) CalculateHistoricalRewards(ctx sdk.Context, currentReward *types
 	})
 	// Unlocking Locks
 	newTotalStakes = newTotalStakes.Sub(k.lk.GetUnlockingPeriodLocksAccumulation(ctx, denom, epochInfo.CurrentEpochStartTime.Add(duration)))
+
+	ctx.Logger().Info(fmt.Sprintf("STH::: newTotalStakes %d", newTotalStakes.Int64()))
 
 	currentReward.Count = 0
 	currentReward.Coin = sdk.NewCoin(denom, newTotalStakes)
