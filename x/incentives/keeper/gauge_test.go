@@ -8,6 +8,79 @@ import (
 	lockuptypes "github.com/osmosis-labs/osmosis/x/lockup/types"
 )
 
+func (suite *KeeperTestSuite) SetupUserLock(user userLocks) (accs []sdk.AccAddress) {
+	accs = make([]sdk.AccAddress, 1)
+
+	suite.Assert().Equal(len(user.lockDurations), len(user.lockAmounts))
+	totalLockAmt := user.lockAmounts[0]
+	for j := 1; j < len(user.lockAmounts); j++ {
+		totalLockAmt = totalLockAmt.Add(user.lockAmounts[j]...)
+	}
+	accs[0] = suite.setupAddr(0, "", totalLockAmt)
+	for j := 0; j < len(user.lockAmounts); j++ {
+		_, err := suite.app.LockupKeeper.LockTokens(
+			suite.ctx, accs[0], user.lockAmounts[j], user.lockDurations[j])
+		suite.Require().NoError(err)
+	}
+
+	return
+}
+
+func (suite *KeeperTestSuite) TestF1Distribute() {
+	oneLockupUser := userLocks{
+		lockDurations: []time.Duration{time.Second},
+		lockAmounts:   []sdk.Coins{defaultLPTokens},
+	}
+	twoLockupUser := userLocks{
+		lockDurations: []time.Duration{time.Second, 2 * time.Second},
+		lockAmounts:   []sdk.Coins{defaultLPTokens, defaultLPTokens},
+	}
+	defaultGauge := perpGaugeDesc{
+		lockDenom:    defaultLPDenom,
+		lockDuration: defaultLockDuration,
+		rewardAmount: sdk.Coins{sdk.NewInt64Coin(defaultRewardDenom, 3000)},
+	}
+	oneKRewardCoins := sdk.Coins{sdk.NewInt64Coin(defaultRewardDenom, 1000)}
+	twoKRewardCoins := oneKRewardCoins.Add(oneKRewardCoins...)
+	tests := []struct {
+		users           []userLocks
+		gauges          []perpGaugeDesc
+		expectedRewards []sdk.Coins
+	}{
+		{
+			users:           []userLocks{oneLockupUser, twoLockupUser},
+			gauges:          []perpGaugeDesc{defaultGauge},
+			expectedRewards: []sdk.Coins{oneKRewardCoins, twoKRewardCoins},
+		},
+	}
+	for _, tc := range tests {
+		suite.SetupTest()
+		gauges := suite.SetupGauges(tc.gauges)
+		for _, g := range gauges {
+			suite.app.IncentivesKeeper.F1Distribute(suite.ctx, &g)
+		}
+		addrs := suite.SetupUserLock(oneLockupUser)
+
+		for _, g := range gauges {
+			suite.app.IncentivesKeeper.F1Distribute(suite.ctx, &g)
+		}
+
+		_addr := suite.SetupUserLock(twoLockupUser)
+		addrs = append(addrs, _addr...)
+
+		for _, g := range gauges {
+			suite.app.IncentivesKeeper.F1Distribute(suite.ctx, &g)
+		}
+
+		// addrs := suite.SetupUserLocks(tc.users)
+		// Check expected rewards
+		for i, addr := range addrs {
+			bal := suite.app.BankKeeper.GetAllBalances(suite.ctx, addr)
+			suite.Require().Equal(bal.String(), tc.expectedRewards[i].String())
+		}
+	}
+}
+
 // TestDistribute tests that when the distribute command is executed on
 // a provided gauge,
 func (suite *KeeperTestSuite) TestDistribute() {
@@ -493,4 +566,38 @@ func (suite *KeeperTestSuite) TestGaugesByDenom() {
 
 	testGaugeByDenom(true)
 	testGaugeByDenom(false)
+}
+
+// TestF1Distribute tests f1 distribution
+func (suite *KeeperTestSuite) TestF1Distribute() {
+	defaultGauge := perpGaugeDesc{
+		lockDenom:    defaultLPDenom,
+		lockDuration: defaultLockDuration,
+		rewardAmount: sdk.Coins{sdk.NewInt64Coin(defaultRewardDenom, 3000)},
+	}
+
+	suite.SetupTest()
+	gauges := suite.SetupGauges([]perpGaugeDesc{defaultGauge})
+	gauge := gauges[0]
+	denom := gauge.DistributeTo.Denom
+	duration := gauge.DistributeTo.Duration
+
+	//1st distribute
+	suite.app.IncentivesKeeper.F1Distribute(suite.ctx, &gauge)
+	currentReward, err := suite.app.IncentivesKeeper.GetCurrentReward(suite.ctx, denom, duration)
+	suite.Require().NoError(err)
+	suite.Require().Equal(currentReward.Rewards, defaultGauge.rewardAmount)
+	suite.T().Logf("current_reward=%v", currentReward.Rewards)
+	prevHistoricalReward, err := suite.app.IncentivesKeeper.GetHistoricalReward(suite.ctx, denom, duration, currentReward.Period-1)
+	suite.Require().NoError(err)
+	suite.Require().Equal(prevHistoricalReward.CummulativeRewardRatio, sdk.Coins(nil))
+	suite.T().Logf("historical_reward=%v", prevHistoricalReward.CummulativeRewardRatio)
+
+	//2nd distribute
+	sameGauge, _ := suite.app.IncentivesKeeper.GetGaugeByID(suite.ctx, gauge.GetId())
+	sameGauge.Coins = sdk.Coins{sdk.NewInt64Coin(defaultRewardDenom, 9000)} //add 6000 more
+	suite.app.IncentivesKeeper.F1Distribute(suite.ctx, sameGauge)
+	currentReward, _ = suite.app.IncentivesKeeper.GetCurrentReward(suite.ctx, denom, duration)
+	suite.Require().Equal(currentReward.Rewards, defaultGauge.rewardAmount.Add(sdk.NewInt64Coin(defaultRewardDenom, 6000)))
+	suite.T().Logf("current_reward=%v", currentReward.Rewards)
 }
