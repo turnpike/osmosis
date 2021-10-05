@@ -137,3 +137,25 @@ func (k Keeper) LockableDurations(ctx context.Context, _ *types.QueryLockableDur
 
 	return &types.QueryLockableDurationsResponse{LockableDurations: k.GetLockableDurations(sdkCtx)}, nil
 }
+
+func (k Keeper) CurrentReward(ctx context.Context, req *types.CurrentRewardRequest) (*types.CurrentRewardResponse, error) {
+	sdkCtx := sdk.UnwrapSDKContext(ctx)
+	res, err := k.GetCurrentReward(sdkCtx, req.Denom, req.LockableDurations)
+
+	return &types.CurrentRewardResponse{
+		Period:             res.Period,
+		LastProcessedEpoch: res.LastProcessedEpoch,
+		IsNewEpoch:         res.IsNewEpoch,
+		Coin:               res.Coin,
+		Reward:             res.Rewards,
+	}, err
+}
+
+func (k Keeper) HistoricalReward(ctx context.Context, req *types.HistoricalRewardRequest) (*types.HistoricalRewardResponse, error) {
+	sdkCtx := sdk.UnwrapSDKContext(ctx)
+	res, err := k.GetHistoricalReward(sdkCtx, req.Denom, req.LockableDurations, uint64(req.Period))
+
+	return &types.HistoricalRewardResponse{
+		CumulativeRewardRatio: res.CummulativeRewardRatio,
+	}, err
+}
