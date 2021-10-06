@@ -64,7 +64,11 @@ service Query {
   }
   rpc HistoricalReward(HistoricalRewardRequest) returns (HistoricalRewardResponse) {
     option (google.api.http).get =
-        "/osmosis/incentives/v1beta1/historical_reward";  
+        "/osmosis/incentives/v1beta1/historical_reward";
+  }
+  rpc PeriodLockReward(PeriodLockRewardRequest) returns (PeriodLockRewardResponse) {
+    option (google.api.http).get =
+        "/osmosis/incentives/v1beta1/period_lock_reward";
   }
 }
 
@@ -170,6 +174,18 @@ message HistoricalRewardRequest{
 }
 message HistoricalRewardResponse{
   repeated cosmos.base.v1beta1.Coin cumulative_reward_ratio = 1 [
+    (gogoproto.nullable) = false,
+    (gogoproto.castrepeated) = "github.com/cosmos/cosmos-sdk/types.Coins"
+  ];
+}
+
+message PeriodLockRewardRequest {  
+  uint64 id = 1;
+}
+message PeriodLockRewardResponse {  
+  uint64 ID = 1;
+  map <string, uint64> period = 2;
+  repeated cosmos.base.v1beta1.Coin rewards = 3 [
     (gogoproto.nullable) = false,
     (gogoproto.castrepeated) = "github.com/cosmos/cosmos-sdk/types.Coins"
   ];

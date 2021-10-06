@@ -34,6 +34,7 @@ func GetQueryCmd(queryRoute string) *cobra.Command {
 		GetCmdRewardsEst(),
 		GetCurrentReward(),
 		GetHistoricalReward(),
+		GetPeriodLockReward(),
 	)
 
 	return cmd
@@ -425,6 +426,48 @@ $ %s query incentives historical-reward [denom] [lockable-duration] [period]
 				Denom:             denom,
 				LockableDurations: duration,
 				Period:            period,
+			})
+			if err != nil {
+				return err
+			}
+
+			return clientCtx.PrintProto(res)
+		},
+	}
+
+	flags.AddQueryFlagsToCmd(cmd)
+
+	return cmd
+}
+
+func GetPeriodLockReward() *cobra.Command {
+	cmd := &cobra.Command{
+		Use:   "period-lock-reward",
+		Short: "Query period lock reward",
+		Long: strings.TrimSpace(
+			fmt.Sprintf(`Query period lock reward.
+
+Example:
+$ %s query incentives period-lock-reward [id]
+`,
+				version.AppName,
+			),
+		),
+		Args: cobra.ExactArgs(1),
+		RunE: func(cmd *cobra.Command, args []string) error {
+			clientCtx, err := client.GetClientQueryContext(cmd)
+			if err != nil {
+				return err
+			}
+			queryClient := types.NewQueryClient(clientCtx)
+
+			id, err := strconv.ParseUint(args[0], 10, 64)
+			if err != nil {
+				return err
+			}
+
+			res, err := queryClient.PeriodLockReward(cmd.Context(), &types.PeriodLockRewardRequest{
+				Id: id,
 			})
 			if err != nil {
 				return err

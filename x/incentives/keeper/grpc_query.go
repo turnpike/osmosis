@@ -159,3 +159,14 @@ func (k Keeper) HistoricalReward(ctx context.Context, req *types.HistoricalRewar
 		CumulativeRewardRatio: res.CummulativeRewardRatio,
 	}, err
 }
+
+func (k Keeper) PeriodLockReward(ctx context.Context, req *types.PeriodLockRewardRequest) (*types.PeriodLockRewardResponse, error) {
+	sdkCtx := sdk.UnwrapSDKContext(ctx)
+	res, err := k.GetPeriodLockReward(sdkCtx, req.Id)
+
+	return &types.PeriodLockRewardResponse{
+		ID:      res.ID,
+		Period:  res.Period,
+		Rewards: res.Rewards,
+	}, err
+}
