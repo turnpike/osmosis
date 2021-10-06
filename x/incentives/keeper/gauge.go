@@ -856,8 +856,9 @@ func (k Keeper) UpdateRewardForLock(ctx sdk.Context, lockID uint64, duration tim
 		if err != nil {
 			return err
 		}
+		lockRewardKey := denom + "/" + duration.String()
 		targetPeriod := currentReward.Period - 1 // last updated historical reward, TODO: check this behavior
-		period, ok := lockReward.Period[denom+duration.String()]
+		period, ok := lockReward.Period[lockRewardKey]
 		if ok {
 			reward, err := k.CalculateReward(ctx, denom, duration, coin.Amount, targetPeriod, period)
 			if err != nil {
@@ -865,7 +866,7 @@ func (k Keeper) UpdateRewardForLock(ctx sdk.Context, lockID uint64, duration tim
 			}
 			lockReward.Rewards = lockReward.Rewards.Add(reward...)
 		}
-		lockReward.Period[denom+duration.String()] = targetPeriod
+		lockReward.Period[lockRewardKey] = targetPeriod
 	}
 	k.SetPeriodLockReward(ctx, lockReward)
 	return nil
