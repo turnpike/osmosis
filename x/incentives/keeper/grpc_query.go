@@ -145,7 +145,6 @@ func (k Keeper) CurrentReward(ctx context.Context, req *types.CurrentRewardReque
 	return &types.CurrentRewardResponse{
 		Period:             res.Period,
 		LastProcessedEpoch: res.LastProcessedEpoch,
-		IsNewEpoch:         res.IsNewEpoch,
 		Coin:               res.Coin,
 		Reward:             res.Rewards,
 	}, err
