@@ -37,6 +37,15 @@ func (k Keeper) AfterEpochEnd(ctx sdk.Context, epochIdentifier string, epochNumb
 				panic(err)
 			}
 			if !gauge.IsPerpetual && gauge.NumEpochsPaidOver <= gauge.FilledEpochs {
+				lastGaugeEpoch := k.GetEpochInfo(ctx)
+				lastGaugeEpoch.CurrentEpoch++
+				lastGaugeEpoch.CurrentEpochStartTime.Add(lastGaugeEpoch.Duration)
+				denom := gauge.DistributeTo.Denom
+				duration := gauge.DistributeTo.Duration
+				if err := k.UpdateHistoricalReward(ctx, sdk.Coins{sdk.NewInt64Coin(denom, 0)}, duration, lastGaugeEpoch, []time.Duration{duration}); err != nil {
+					panic(err)
+				}
+
 				if err := k.FinishDistribution(ctx, gauge); err != nil {
 					panic(err)
 				}

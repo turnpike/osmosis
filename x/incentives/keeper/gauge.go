@@ -815,8 +815,8 @@ func (k Keeper) F1Distribute(ctx sdk.Context, gauge *types.Gauge) error {
 	searchStart := epochStartTime.Add(duration)
 	unlockings := k.GetUnlockingsToDistribution(ctx, denom, searchStart, epochInfo.Duration)
 
-	isNewPeriod := (!currentReward.Coin.Amount.Equal(lockSum)) || (len(unlockings) > 0) || // 1. total stake is changed
-		((!gauge.IsPerpetual) && (remainEpochs == 1) && (!lockSum.IsZero())) // 2. non-perpetual gauge goes finished
+	isNewPeriod := (!currentReward.Coin.Amount.Equal(lockSum)) || (len(unlockings) > 0) // 1. total stake is changed
+
 	if isNewPeriod {
 		historicalReward, err := k.CalculateHistoricalRewards(ctx, currentReward, denom, duration, epochInfo)
 		if err != nil {
@@ -850,6 +850,7 @@ func (k Keeper) F1Distribute(ctx sdk.Context, gauge *types.Gauge) error {
 			return err
 		}
 	}
+
 	if currentReward.LastProcessedEpoch != -1 {
 		err = k.SetCurrentReward(ctx, currentReward, denom, duration)
 		return err
