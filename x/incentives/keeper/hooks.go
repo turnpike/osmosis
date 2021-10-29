@@ -27,22 +27,19 @@ func (k Keeper) AfterEpochEnd(ctx sdk.Context, epochIdentifier string, epochNumb
 		// distribute due to epoch event
 		ctx.EventManager().IncreaseCapacity(2e6)
 		gauges = k.GetActiveGauges(ctx)
-		// _, err := k.Distribute(ctx, gauges)
-		// if err != nil {
-		// 	panic(err)
-		// }
 		for _, gauge := range gauges {
 			err := k.F1Distribute(ctx, &gauge)
 			if err != nil {
 				panic(err)
 			}
 			if !gauge.IsPerpetual && gauge.NumEpochsPaidOver <= gauge.FilledEpochs {
+				// move to next period if gauge is finished since f1Distribution will not be called
 				lastGaugeEpoch := k.GetEpochInfo(ctx)
 				lastGaugeEpoch.CurrentEpoch++
 				lastGaugeEpoch.CurrentEpochStartTime.Add(lastGaugeEpoch.Duration)
 				denom := gauge.DistributeTo.Denom
 				duration := gauge.DistributeTo.Duration
-				if err := k.UpdateHistoricalReward(ctx, sdk.Coins{sdk.NewInt64Coin(denom, 0)}, duration, lastGaugeEpoch, []time.Duration{duration}); err != nil {
+				if err := k.updateHistoricalReward(ctx, denom, duration, lastGaugeEpoch); err != nil {
 					panic(err)
 				}
 
@@ -102,7 +99,7 @@ func (h Hooks) OnTokenLocked(ctx sdk.Context, address sdk.AccAddress, lockID uin
 	}
 	epochInfo := h.k.GetEpochInfo(ctx)
 	lockableDurations := h.k.GetLockableDurations(ctx)
-	err = h.k.UpdateHistoricalReward(ctx, amount, lockDuration, epochInfo, lockableDurations)
+	err = h.k.NewHistoricalReward(ctx, amount, lockDuration, epochInfo, lockableDurations)
 	if err != nil {
 		panic(err)
 	}
@@ -124,7 +121,7 @@ func (h Hooks) OnTokenUnlocked(ctx sdk.Context, address sdk.AccAddress, lockID u
 	epochInfo := h.k.GetEpochInfo(ctx)
 	lockableDurations := h.k.GetLockableDurations(ctx)
 	if lock.Coins.IsAnyGT(amount) {
-		err = h.k.UpdateHistoricalReward(ctx, amount, lockDuration, epochInfo, lockableDurations)
+		err = h.k.NewHistoricalReward(ctx, amount, lockDuration, epochInfo, lockableDurations)
 		if err != nil {
 			panic(err)
 		}

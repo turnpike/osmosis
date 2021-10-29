@@ -970,33 +970,39 @@ func (k Keeper) GetRewardForLock(ctx sdk.Context, lock lockuptypes.PeriodLock, l
 	return lockReward, nil
 }
 
-func (k Keeper) UpdateHistoricalReward(ctx sdk.Context, lockedCoins sdk.Coins, lockDuration time.Duration, epochInfo epochtypes.EpochInfo, lockableDurations []time.Duration) error {
+func (k Keeper) updateHistoricalReward(ctx sdk.Context, denom string, lockableDuration time.Duration, epochInfo epochtypes.EpochInfo) error {
+	currentReward, err := k.GetCurrentReward(ctx, denom, lockableDuration)
+	if err != nil {
+		return err
+	}
+	historicalReward, err := k.CalculateHistoricalRewards(ctx, currentReward, denom, lockableDuration, epochInfo)
+	if err != nil {
+		return err
+	}
+	if historicalReward != nil {
+		err = k.AddHistoricalReward(ctx, *historicalReward, denom, lockableDuration, currentReward.Period, epochInfo.CurrentEpoch)
+		if err != nil {
+			return err
+		}
+		currentReward.LastProcessedEpoch = epochInfo.CurrentEpoch
+		currentReward.Period++
+		currentReward.Rewards = sdk.Coins{}
+		err = k.SetCurrentReward(ctx, currentReward, denom, lockableDuration)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+func (k Keeper) NewHistoricalReward(ctx sdk.Context, lockedCoins sdk.Coins, lockDuration time.Duration, epochInfo epochtypes.EpochInfo, lockableDurations []time.Duration) error {
 	for _, lockableDuration := range lockableDurations {
 		if lockDuration < lockableDuration {
 			continue
 		}
 		for _, coin := range lockedCoins {
-			denom := coin.Denom
-			currentReward, err := k.GetCurrentReward(ctx, denom, lockableDuration)
-			if err != nil {
+			if err := k.updateHistoricalReward(ctx, coin.Denom, lockableDuration, epochInfo); err != nil {
 				return err
-			}
-			historicalReward, err := k.CalculateHistoricalRewards(ctx, currentReward, denom, lockableDuration, epochInfo)
-			if err != nil {
-				return err
-			}
-			if historicalReward != nil {
-				err = k.AddHistoricalReward(ctx, *historicalReward, denom, lockableDuration, currentReward.Period, epochInfo.CurrentEpoch)
-				if err != nil {
-					return err
-				}
-				currentReward.LastProcessedEpoch = epochInfo.CurrentEpoch
-				currentReward.Period++
-				currentReward.Rewards = sdk.Coins{}
-				err = k.SetCurrentReward(ctx, currentReward, denom, lockableDuration)
-				if err != nil {
-					return err
-				}
 			}
 		}
 	}
@@ -1045,7 +1051,7 @@ func (k Keeper) ClaimLockReward(ctx sdk.Context, lock lockuptypes.PeriodLock, ow
 	}
 	epochInfo := k.GetEpochInfo(ctx)
 	lockableDurations := k.GetLockableDurations(ctx)
-	err = k.UpdateHistoricalReward(ctx, lock.Coins, lock.Duration, epochInfo, lockableDurations)
+	err = k.NewHistoricalReward(ctx, lock.Coins, lock.Duration, epochInfo, lockableDurations)
 	if err != nil {
 		return nil, err
 	}
